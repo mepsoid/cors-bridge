@@ -67,7 +67,7 @@
 			responseQueue = []
 			
 		var root = window
-        while (root !== root.parent) root = root.parent
+		while (root !== root.parent) root = root.parent
 		
 		if (window.addEventListener) {
 			window.addEventListener('message', onMessage)
@@ -75,9 +75,9 @@
 			window.attachEvent('onmessage', onMessage) // IE 8
 		}
 
-        function onMessage(event) {
-            var data = event.data
-            if (data.indexOf(channelHost) !== 0) return
+		function onMessage(event) {
+			var data = event.data
+			if (data.indexOf(channelHost) !== 0) return
 
 			data = data.substr(channelHost.length)
 			var messages = JSON.parse(data)
@@ -100,8 +100,8 @@
 			eventQueue = []
 			for (var i = 0; i < events.length; ++i) {
 				var event = events[i]
-                var command = event.command
-                var data = event.data
+				var command = event.command
+				var data = event.data
 				var handlers = eventHandlers[command]
 				if (handlers) {
 					for (var j = 0; j < handlers.length; ++j) {
@@ -118,12 +118,12 @@
 			var requests = requestQueue.concat()
 			requestQueue = []
 			var data = channelClients + JSON.stringify(requests)
-            var targets = Array.prototype.slice.call(root.frames)
-            targets.push(root)
-            for (var i = 0; i < targets.length; ++i) {
-                var target = targets[i]
-                target.postMessage(data, '*')
-            }
+			var targets = Array.prototype.slice.call(root.frames)
+			targets.push(root)
+			for (var i = 0; i < targets.length; ++i) {
+				var target = targets[i]
+				target.postMessage(data, '*')
+			}
 		}
 
 		function processResponses() {
@@ -206,23 +206,23 @@
 					guid: guid,
 					command: command + ''
 				}
-                var args = Array.prototype.slice.call(arguments)
-                if (args.length > 1) {
-                    args.shift()
-                    request.data = args
-                }
+				var args = Array.prototype.slice.call(arguments)
+				if (args.length > 1) {
+					args.shift()
+					request.data = args
+				}
 				if (tag) request.tag = tag
 				requestQueue.push(request)
 				processRequests()
 				return holder
 			},
 				
-            /**
-             * Sign to host events
-             * 
-             * @param {string} command event type
-             * @param {*} handler event handler
-             */
+			/**
+			 * Sign to host events
+			 * 
+			 * @param {string} command event type
+			 * @param {*} handler event handler
+			 */
 			sign: function(command, handler) {
 				var handlers = eventHandlers[command]
 				if (!handlers) {
@@ -232,19 +232,19 @@
 				}
 			},
 
-            /**
-             * Unsign from host events
-             * 
-             * @param {string} command event type
-             * @param {*} handler event handler
-             */
+			/**
+			 * Unsign from host events
+			 * 
+			 * @param {string} command event type
+			 * @param {*} handler event handler
+			 */
 			unsign: function(command, handler) {
 				var handlers = eventHandlers[command]
 				if (handlers) {
-                    var index = handlers.indexOf(handler)
-                    if (index >= 0) {
-                        handlers.splice(index)
-                    }
+					var index = handlers.indexOf(handler)
+					if (index >= 0) {
+						handlers.splice(index)
+					}
 				}
 			},
 
