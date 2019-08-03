@@ -1,0 +1,49 @@
+<html><head>
+    <title>CORS-Bridge RPC example client</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Open Sans', sans-serif; }
+        h2 { margin: 0; padding: 0.3rem 0.6rem; background-color:yellowgreen; }
+    </style>
+    <script src='../src/bridgeclient.js'></script>
+    <script>
+        var bridge = BridgeClient(Math.random() * 1000 | 0)
+        var request // last request
+        function selfIdent() {
+            var header = document.getElementById('header')
+            header.innerHTML += ' @' + bridge.tag
+        }
+        function procRequest(req) {
+            request = req
+            request.listen(function(rest) {
+                console.log(`@${bridge.tag} response:`, Array.prototype.slice.call(arguments))
+            }, function(err) {
+                console.log(`@${bridge.tag} error:`, err)
+            }).progress(function(ctx) {
+                console.log(`@${bridge.tag} progress:`, ctx)
+            })
+        }
+
+        // check event
+        bridge.sign('hello', function(one, two) {
+            console.log(`@${bridge.tag} hello:`, Array.prototype.slice.call(arguments))
+        })
+
+        // check sign-unsign
+        var func = function() { throw new Error('Check your unsign method!') }
+        bridge.unsign('hello', func)
+        bridge.sign('hello', func)
+        bridge.sign('hello', func)
+        bridge.unsign('hello', func)
+    
+    </script>
+</head><body onload="selfIdent()">
+    <h2 id='header'>Widget</h2>
+    <p>Send request to host:</p>
+    <button onclick="procRequest(bridge.request('greet'))">REQUEST</button>
+    <button onclick="procRequest(bridge.request('greet', 'howdy'))">REQUEST primitive</button>
+    <button onclick="procRequest(bridge.request('greet', [0, 1, true], undefined, false, -4378.323, {a:{aa:'a', ab:23, ac:null}, b:[]}, NaN))">REQUEST ...rest</button>
+    </br>
+    <p>Destroy self bridge:</p>
+    <button onclick="bridge.destroy()">DESTROY</button>
+</body></html>
