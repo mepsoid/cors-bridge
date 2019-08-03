@@ -7,17 +7,12 @@
 
 (function() {
 
-    function BridgeHostRequest(requestId, requestData, queueAppender) {
+    function BridgeHostRequest(requestId, queueAppender) {
         var
             completed = false,
             guid = requestId
         
         return {
-
-            /**
-             * Requested data
-             */
-            data: requestData,
 
             /**
              * Send update with request processing state
@@ -111,10 +106,10 @@
                 var data = request.data
                 var handlers = requestHandlers[command]
                 if (handlers) {
-                    var holder = BridgeHostRequest(id, data, appendReponse)
+                    var holder = [BridgeHostRequest(id, appendReponse)]
                     for (var i = 0; i < handlers.length; ++i) {
                         var  handler = handlers[i]
-                        handler(holder)
+                        handler.apply(null, holder.concat(data))
                     }
                 }
             }

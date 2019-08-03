@@ -25,7 +25,7 @@
         }
 
         // check event
-        bridge.sign('hello', function(one, two) {
+        bridge.sign('hello', function(param) {
             console.log(`@${bridge.tag} hello:`, Array.prototype.slice.call(arguments))
         })
 
