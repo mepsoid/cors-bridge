@@ -1,202 +1,201 @@
 /**
- * Local cross-frame bridge, host side
+ * Local cross-origin bridge, host side
+ * 
  * @author meps
  */
 
 'use strict';
 
 (function() {
+    var channelHost = 'BRHOST#';
+    var channelClients = 'BRCLIENT#';
 
-    function BridgeHostRequest(requestId, queueAppender) {
-        var
-            completed = false,
-            guid = requestId
+    /**
+     * Client request holder
+     */
+    function BridgeHostRequest(guid, tag, queueAppender) {
+        var completed = false;
         
         return {
 
             /**
+             * Client identifier
+             */
+            tag: function() {
+                return tag;
+            },
+
+            /**
              * Send update with request processing state
              * 
-             * @param {*} state
+             * @param {*=} state current progress statement
              */
             progress: function(state) {
-                if (completed) throw new Error('Cannot apply to completed request')
+                if (completed) {
+                    throw new Error('Cannot apply to completed request');
+                }
                 
                 queueAppender({
                     guid: guid,
                     ts: Date.now(),
                     type: 'progress',
                     data: state
-                })
+                });
             },
 
             /**
-             * Complete request with successful response
+             * Complete request 
              * 
-             * @param {*} rest
+             * @param {object=} error error statement
+             * @param {*...} args arguments of successful response
              */
-            response: function(rest) {
-                if (completed) throw new Error('Cannot apply to completed request')
+            response: function(error) {
+                if (completed) {
+                    throw new Error('Cannot apply to completed request');
+                }
 
-                completed = true
-                queueAppender({
-                    guid: guid,
-                    ts: Date.now(),
-                    type: 'response',
-                    data: Array.prototype.slice.call(arguments)
-                })
-            },
-
-            /**
-             * Complete request with error statement
-             * 
-             * @param {*} error 
-             */
-            error: function(error) {
-                if (completed) throw new Error('Cannot apply to completed request')
-
-                completed = true
-                queueAppender({
-                    guid: guid,
-                    ts: Date.now(),
-                    type: 'error',
-                    data: error
-                })
+                completed = true;
+                if (error) {
+                    queueAppender({
+                        guid: guid,
+                        ts: Date.now(),
+                        type: 'error',
+                        data: error
+                    });
+                } else {
+                    var args = Array.prototype.slice.call(arguments);
+                    args.shift();
+                    queueAppender({
+                        guid: guid,
+                        ts: Date.now(),
+                        type: 'response',
+                        data: args
+                    });
+                }
             }
         }
     }
 
+    /**
+     * Host bridge
+     */
     function BridgeHost() {
-        var
-            channelHost = 'BRHOST#',
-            channelClients = 'BRCLIENT#',
-            eventQueue = [],
-            requestHandlers = {},
-            requestQueue = [],
-            responseQueue = []
+        var eventQueue = [];
+        var requestHandlers = {};
+        var requestQueue = [];
+        var responseQueue = [];
 
-        var root = window
-        while (root !== root.parent) root = root.parent
+        var root = window;
+        while (root !== root.parent) root = root.parent;
 
         if (window.addEventListener) {
-            window.addEventListener('message', onMessage)
+            window.addEventListener('message', onMessage);
         } else {
-            window.attachEvent('onmessage', onMessage) // IE 8
+            window.attachEvent('onmessage', onMessage); // IE 8
         }
 
         function onMessage(event) {
-            var data = event.data
-            if (data.indexOf(channelClients) !== 0) return
+            var data = event.data;
+            if (data.indexOf(channelClients) !== 0) return;
 
-            data = data.substr(channelClients.length)
-            var messages = JSON.parse(data)
-            requestQueue = requestQueue.concat(messages)
-            processRequests()
+            data = data.substr(channelClients.length);
+            var messages = JSON.parse(data);
+            requestQueue = requestQueue.concat(messages);
+            processRequests();
         }
 
         function processRequests() {
-            if (!requestQueue) return
+            if (!requestQueue) return;
 
-            var requests = requestQueue.concat()
-            requestQueue = []
+            var requests = requestQueue.concat();
+            requestQueue = [];
             for (var i = 0; i < requests.length; ++i) {
-                var request = requests[i]
-                var id = request.guid
-                var command = request.command
-                var data = request.data
-                var handlers = requestHandlers[command]
-                if (handlers) {
-                    var holder = [BridgeHostRequest(id, appendReponse)]
-                    for (var i = 0; i < handlers.length; ++i) {
-                        var  handler = handlers[i]
-                        handler.apply(null, holder.concat(data))
-                    }
+                var request = requests[i];
+                var handler = requestHandlers[request.command];
+                var holder = BridgeHostRequest(request.guid, request.tag, appendReponse);
+                var data = request.data;
+                if (data) {
+                    handler.apply(null, [holder].concat(data));
+                } else {
+                    handler(holder);
                 }
+                
             }
         }
 
         function processEvents() {
-            if (!eventQueue) return
+            if (!eventQueue) return;
 
-            var events = eventQueue.concat()
-            eventQueue = []
-            sendMessages(events)
+            var events = eventQueue.concat();
+            eventQueue = [];
+            sendMessages(events);
         }
 
         function sendMessages(messages) {
-            var data = channelHost + JSON.stringify(messages)
-            var targets = Array.prototype.slice.call(root.frames)
-            targets.push(root)
+            var data = channelHost + JSON.stringify(messages);
+            var targets = Array.prototype.slice.call(root.frames);
+            targets.push(root);
             for (var i = 0; i < targets.length; ++i) {
-                var target = targets[i]
-                target.postMessage(data, '*')
+                var target = targets[i];
+                target.postMessage(data, '*');
             }
         }
 
         function appendReponse(message) {
-            responseQueue.push(message)
-            processResponses()
+            responseQueue.push(message);
+            processResponses();
         }
 
         function processResponses() {
-            if (!responseQueue) return
+            if (!responseQueue) return;
 
-            var responses = responseQueue.concat()
-            responseQueue = []
-            sendMessages(responses)
+            var responses = responseQueue.concat();
+            responseQueue = [];
+            sendMessages(responses);
         }
 
         return {
 
             /**
-             * Send event to clients
+             * Send event to all active clients
              * 
              * @param {string} command event type
-             * @param {*} data event payload
+             * @param {*=} data event payload
              */
             dispatch: function(command, data) {
                 var event = {
                     ts: Date.now(),
                     command: command + ''
                 }
-                if (data !== undefined) event.data = data
-                eventQueue.push(event)
-                processEvents()
+                if (data !== undefined) event.data = data;
+                eventQueue.push(event);
+                processEvents();
             },
+
+            /**
+             * Client request callback
+             * 
+             * @callback BridgeCallbackRequest
+             * @param {BridgeHostRequest} request request holder
+             * @param {*...} args request arguments
+             */
 
             /**
              * Sign to clients requests
              * 
              * @param {string} command request type
-             * @param {*} handler request handler
+             * @param {BridgeCallbackRequest} handler request handler
              */
-            sign: function(command, handler) {
-                var handlers = requestHandlers[command]
-                if (!handlers) {
-                    requestHandlers[command] = [handler]
-                } else if (handlers.indexOf(handler) < 0) {
-                    handlers.push(handler)
-                }
-            },
-
-            /**
-             * Unsign from clients requests
-             * 
-             * @param {string} command request type
-             * @param {*} handler request handler
-             */
-            unsign: function(command, handler) {
-                var handlers = requestHandlers[command]
-                if (handlers) {
-                    var index = handlers.indexOf(handler)
-                    if (index >= 0) {
-                        handlers.splice(index)
-                    }
+            onrequest: function(command, handler) {
+                if (handler) {
+                    requestHandlers[command] = handler;
+                } else {
+                    delete requestHandlers[command];
                 }
             }
 
         }
     }
 
-    if (typeof window.BridgeHost === 'undefined') window.BridgeHost = BridgeHost()
+    if (typeof window.BridgeHost === 'undefined') window.BridgeHost = BridgeHost();
 })()

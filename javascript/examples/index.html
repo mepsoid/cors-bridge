@@ -7,12 +7,12 @@
     </style>
     <script src='../src/bridgehost.js'></script>
     <script>
-        var holder
-        BridgeHost.sign('greet', function(request, rest) {
-            holder = request
-            var args = Array.prototype.slice.call(arguments)
-            args.shift()
-            console.log('greet:', args)
+        var callbacks;
+        BridgeHost.onrequest('greet', function(request, rest) {
+            callbacks = request
+            var args = Array.prototype.slice.call(arguments);
+            args.shift();
+            console.log(`@${request.tag()} greet:`, args);
         })
     </script>
 </head><body>
@@ -23,21 +23,20 @@
     <button onclick="BridgeHost.dispatch('hello', {a:1, b:[], c:null, d:'str', e:undefined, f:NaN})">EVENT {object}</button>
     <br/>
     <p>Reply to client request:</p>
-    <button onclick="holder.progress()">PROGRESS</button>
-    <button onclick="holder.progress(0.5)">PROGRESS primitive</button>
-    <button onclick="holder.progress({ current:32772, total:738283, module:'loader', state:'loading' })">PROGRESS {object}</button>
+    <button onclick="callbacks.progress()">PROGRESS</button>
+    <button onclick="callbacks.progress(0.5)">PROGRESS primitive</button>
+    <button onclick="callbacks.progress({ current:32772, total:738283, module:'loader', state:'loading' })">PROGRESS {object}</button>
     <br/>
-    <button onclick="holder.response()">RESPONSE</button>
-    <button onclick="holder.response(true)">RESPONSE primitive</button>
-    <button onclick="holder.response(null, true, {a:1, b:undefined, c:[5,6,7, false]}, 'bar')">RESPONSE ...rest</button>
+    <button onclick="callbacks.response(null)">RESPONSE</button>
+    <button onclick="callbacks.response(null, true)">RESPONSE primitive</button>
+    <button onclick="callbacks.response(null, true, undefined, {a:1, b:undefined, c:[5,6,7, false]}, 'bar')">RESPONSE ...rest</button>
     <br/>
-    <button onclick="holder.error()">ERROR</button>
-    <button onclick="holder.error(404)">ERROR primitive</button>
-    <button onclick="holder.error({ code:123, message:'Wow! Such much'})">ERROR {object}</button>
+    <button onclick="callbacks.response(404)">ERROR primitive</button>
+    <button onclick="callbacks.response({ code:123, message:'Wow! Such much'})">ERROR {object}</button>
     <hr/>
-    <iframe id='client-frame-1' src='client.html' width='400px' height='220px'></iframe>
-    <iframe id='client-frame-2' src='client.html' width='400px' height='220px'></iframe>
+    <iframe id='client-frame-1' src='client.html' width='48%' height='220em'></iframe>
+    <iframe id='client-frame-2' src='client.html' width='48%' height='220em'></iframe>
     <br/>
-    <iframe id='client-frame-3' src='client.html' width='400px' height='220px'></iframe>
-    <iframe id='client-frame-4' src='client.html' width='400px' height='220px'></iframe>
+    <iframe id='client-frame-3' src='client.html' width='48%' height='220em'></iframe>
+    <iframe id='client-frame-4' src='client.html' width='48%' height='220em'></iframe>
 </body></html>

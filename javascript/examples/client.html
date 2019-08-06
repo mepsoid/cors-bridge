@@ -7,35 +7,33 @@
     </style>
     <script src='../src/bridgeclient.js'></script>
     <script>
-        var bridge = BridgeClient(Math.random() * 1000 | 0)
-        var request // last request
+        var bridge = BridgeClient({
+            tag: Math.random() * 1000 | 0
+        });
+
         function selfIdent() {
-            var header = document.getElementById('header')
-            header.innerHTML += ' @' + bridge.tag
-        }
-        function procRequest(req) {
-            request = req
-            request.listen(function(rest) {
-                console.log(`@${bridge.tag} response:`, Array.prototype.slice.call(arguments))
-            }, function(err) {
-                console.log(`@${bridge.tag} error:`, err)
-            }).progress(function(ctx) {
-                console.log(`@${bridge.tag} progress:`, ctx)
-            })
+            var header = document.getElementById('header');
+            header.innerHTML += ' @' + bridge.tag();
         }
 
-        // check event
-        bridge.sign('hello', function(param) {
-            console.log(`@${bridge.tag} hello:`, Array.prototype.slice.call(arguments))
+        function procRequest(request) {
+            request.onresponse = function(error, rest) {
+                if (error) {
+                    console.log(`@${bridge.tag()} error:`, error);
+                } else {
+                    var args = Array.prototype.slice.call(arguments);
+                    args.shift();
+                    console.log(`@${bridge.tag()} response:`, args);
+                }
+            }
+            request.onprogress = function(state) {
+                console.log(`@${bridge.tag()} progress:`, state);
+            }
+        }
+
+        bridge.onevent('hello', function(event) {
+            console.log(`@${bridge.tag()} hello:`, event);
         })
-
-        // check sign-unsign
-        var func = function() { throw new Error('Check your unsign method!') }
-        bridge.unsign('hello', func)
-        bridge.sign('hello', func)
-        bridge.sign('hello', func)
-        bridge.unsign('hello', func)
-    
     </script>
 </head><body onload="selfIdent()">
     <h2 id='header'>Widget</h2>
