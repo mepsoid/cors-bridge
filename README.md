@@ -24,7 +24,7 @@ BridgeHost.onrequest('auth', function(request, login, password) {
   if (login !== 'user' || password !== 'P@$$') {
       // reply with error statement as first argument
       request.response({ code: 1, message:'No such login or password' });
-      return
+      return;
   }
   
   // send some optional authorization progress 

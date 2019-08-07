@@ -112,6 +112,8 @@
             for (var i = 0; i < requests.length; ++i) {
                 var request = requests[i];
                 var handler = requestHandlers[request.command];
+                if (!handler) continue;
+
                 var holder = BridgeHostRequest(request.guid, request.tag, appendReponse);
                 var data = request.data;
                 if (data) {
