@@ -7,8 +7,8 @@
 'use strict';
 
 (function() {
-    var channelHost = 'BRHOST#';
-    var channelClients = 'BRCLIENT#';
+    var channelHost = 'CORSBridgeHost#';
+    var channelClients = 'CORSBridgeClient#';
 
     /**
      * Client bridge setup options
@@ -83,12 +83,21 @@
             var requests = requestQueue.concat();
             requestQueue = [];
             var data = channelClients + JSON.stringify(requests);
-            var targets = Array.prototype.slice.call(root.frames);
-            targets.push(root);
+            var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
                 target.postMessage(data, '*');
             }
+        }
+
+        function collectTargets(from) {
+            var collected = [from];
+            for (var i = 0; i < collected.length; ++i) {
+                var target = collected[i];
+                var targets = Array.prototype.slice.call(target.frames);
+                collected = collected.concat(targets);
+            }
+            return collected;
         }
 
         function processResponses() {
