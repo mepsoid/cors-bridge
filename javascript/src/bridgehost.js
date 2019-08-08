@@ -4,9 +4,9 @@
  * @author meps
  */
 
-'use strict';
-
 (function() {
+    'use strict';
+
     var channelHost = 'CORSBridgeHost#';
     var channelClients = 'CORSBridgeClient#';
 
@@ -63,8 +63,7 @@
                         data: error
                     });
                 } else {
-                    var args = Array.prototype.slice.call(arguments);
-                    args.shift();
+                    var args = Array.prototype.slice.call(arguments, 1);
                     queueAppender({
                         guid: guid,
                         ts: Date.now(),
@@ -86,7 +85,9 @@
         var responseQueue = [];
 
         var root = window;
-        while (root !== root.parent) root = root.parent;
+        while (root !== root.parent) {
+            root = root.parent;
+        }
 
         if (window.addEventListener) {
             window.addEventListener('message', onMessage);
@@ -177,7 +178,7 @@
                 var event = {
                     ts: Date.now(),
                     command: command + ''
-                }
+                };
                 if (data !== undefined) event.data = data;
                 eventQueue.push(event);
                 processEvents();
@@ -209,4 +210,4 @@
     }
 
     if (typeof window.BridgeHost === 'undefined') window.BridgeHost = BridgeHost();
-})()
+})();

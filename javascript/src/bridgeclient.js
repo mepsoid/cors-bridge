@@ -4,9 +4,9 @@
  * @author meps
  */
 
-'use strict';
-
 (function() {
+    'use strict';
+
     var channelHost = 'CORSBridgeHost#';
     var channelClients = 'CORSBridgeClient#';
 
@@ -29,9 +29,11 @@
         var requestQueue = [];
         var requestCallbacks = {};
         var responseQueue = [];
-            
+
         var root = window;
-        while (root !== root.parent) root = root.parent;
+        while (root !== root.parent) {
+            root = root.parent;
+        }
         
         if (window.addEventListener) {
             window.addEventListener('message', onMessage);
@@ -114,18 +116,24 @@
                 var data = response.data;
                 switch (response.type) {
                     case 'progress':
-                        callbacks.onprogress(data);
+                        if (callbacks.onprogress) {
+                            callbacks.onprogress(data);
+                        }
                         break;
 
                     case 'error':
                         delete requestCallbacks[guid];
-                        callbacks.onresponse(data);
+                        if (callbacks.onresponse) {
+                            callbacks.onresponse(data);
+                        }
                         break;
 
                     case 'response':
                         delete requestCallbacks[guid];
                         data.unshift(null); // no error
-                        callbacks.onresponse.apply(null, data);
+                        if (callbacks.onresponse) {
+                            callbacks.onresponse.apply(null, data);
+                        }
                         break;
                 }
             }
@@ -205,11 +213,10 @@
                     ts: Date.now(),
                     guid: guid,
                     command: command + ''
-                }
-                var args = Array.prototype.slice.call(arguments);
-                if (args.length > 1) {
-                    args.shift()
-                    request.data = args
+                };
+                var args = Array.prototype.slice.call(arguments, 1);
+                if (args.length > 0) {
+                    request.data = args;
                 }
                 if (tag) request.tag = tag;
                 requestQueue.push(request);
@@ -261,4 +268,4 @@
 
     if (typeof window.BridgeClient === 'undefined') window.BridgeClient = BridgeClient;
 
-})()
+})();
