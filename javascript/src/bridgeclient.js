@@ -7,8 +7,9 @@
 (function() {
     'use strict';
 
-    var channelHost = 'CORSBridgeHost#';
-    var channelClients = 'CORSBridgeClient#';
+    var channelHost = 'CORSBridgeHost';
+    var channelClients = 'CORSBridgeClient';
+    var channelId = 'cors_bridge_channel';
 
     /**
      * Client bridge setup options
@@ -43,10 +44,10 @@
 
         function onMessage(event) {
             var data = event.data;
-            if (data.indexOf(channelHost) !== 0) return;
+            if (typeof(data) !== 'object') return;
+            if (data[channelId] !== channelHost) return;
 
-            data = data.substr(channelHost.length);
-            var messages = JSON.parse(data);
+            var messages = data.messages;
             for (var i = 0; i < messages.length; ++i) {
                 var message = messages[i];
                 if (message.guid) {
@@ -82,9 +83,12 @@
         function processRequests() {
             if (!requestQueue) return;
 
-            var requests = requestQueue.concat();
+            var messages = requestQueue.concat();
             requestQueue = [];
-            var data = channelClients + JSON.stringify(requests);
+            var data = {
+                messages: messages
+            };
+            data[channelId] = channelClients;
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
@@ -132,7 +136,7 @@
                         delete requestCallbacks[guid];
                         data.unshift(null); // no error
                         if (callbacks.onresponse) {
-                            callbacks.onresponse.apply(null, data);
+                            callbacks.onresponse.apply(this, data);
                         }
                         break;
                 }

@@ -7,8 +7,9 @@
 (function() {
     'use strict';
 
-    var channelHost = 'CORSBridgeHost#';
-    var channelClients = 'CORSBridgeClient#';
+    var channelHost = 'CORSBridgeHost';
+    var channelClients = 'CORSBridgeClient';
+    var channelId = 'cors_bridge_channel';
 
     /**
      * Client request holder
@@ -97,10 +98,10 @@
 
         function onMessage(event) {
             var data = event.data;
-            if (data.indexOf(channelClients) !== 0) return;
+            if (typeof(data) !== 'object') return;
+            if (data[channelId] !== channelClients) return;
 
-            data = data.substr(channelClients.length);
-            var messages = JSON.parse(data);
+            var messages = data.messages;
             requestQueue = requestQueue.concat(messages);
             processRequests();
         }
@@ -118,7 +119,7 @@
                 var holder = BridgeHostRequest(request.guid, request.tag, appendReponse);
                 var data = request.data;
                 if (data) {
-                    handler.apply(null, [holder].concat(data));
+                    handler.apply(this, [holder].concat(data));
                 } else {
                     handler(holder);
                 }
@@ -135,7 +136,10 @@
         }
 
         function sendMessages(messages) {
-            var data = channelHost + JSON.stringify(messages);
+            var data = {
+                messages: messages
+            };
+            data[channelId] = channelHost;
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
