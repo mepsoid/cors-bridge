@@ -121,10 +121,11 @@ package {
 		
 		private function log(...rest):void {
 			var args:Array = rest.map(function(item:*, index:int, arr:Array):String {
-				return getQualifiedClassName(item) == 'Object' ? JSON.stringify(item) : item;
+				var className:String = getQualifiedClassName(item);
+				return className == 'Object' || className == 'Array' ? JSON.stringify(item) : item;
 			});
 			var str:String = args.join(' ');
-			//trace(str);
+			trace(str);
 			ExternalInterface.call('console.log', str);
 		}
 		
