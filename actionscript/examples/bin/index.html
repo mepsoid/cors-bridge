@@ -1,0 +1,42 @@
+<html><head>
+    <title>CORS-Bridge RPC example host</title>
+    <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Open Sans', sans-serif; }
+        h2 { margin: 0; padding: 0.3rem 0.6rem; background-color:coral; }
+    </style>
+    <script src='js/bridgehost.js'></script>
+    <script>
+        var callbacks;
+        BridgeHost.onrequest('greet', function(request, rest) {
+            callbacks = request
+            var args = Array.prototype.slice.call(arguments);
+            args.shift();
+            console.log(`@${request.tag()} greet:`, args);
+        })
+    </script>
+</head><body>
+    <h2>Host</h2>
+    <p>Broadcast event to clients:</p>
+    <button onclick="BridgeHost.dispatch('hello')">EVENT</button>
+    <button onclick="BridgeHost.dispatch('hello', 'world')">EVENT primitive</button>
+    <button onclick="BridgeHost.dispatch('hello', {a:1, b:[], c:null, d:'str', e:undefined, f:NaN})">EVENT {object}</button>
+    <br/>
+    <p>Reply to client request:</p>
+    <button onclick="callbacks.progress()">PROGRESS</button>
+    <button onclick="callbacks.progress(0.5)">PROGRESS primitive</button>
+    <button onclick="callbacks.progress({ current:32772, total:738283, module:'loader', state:'loading' })">PROGRESS {object}</button>
+    <br/>
+    <button onclick="callbacks.response(null)">RESPONSE</button>
+    <button onclick="callbacks.response(null, true)">RESPONSE primitive</button>
+    <button onclick="callbacks.response(null, true, undefined, {a:1, b:undefined, c:[5,6,7, false]}, 'bar')">RESPONSE ...rest</button>
+    <br/>
+    <button onclick="callbacks.response(404)">ERROR primitive</button>
+    <button onclick="callbacks.response({ code:123, message:'Wow! Such much'})">ERROR {object}</button>
+    <hr/>
+    <iframe id='client-frame-1' src='client.html' width='48%' height='220em'></iframe>
+    <!-- iframe id='client-frame-2' src='client.html' width='48%' height='220em'></iframe>
+    <br/>
+    <iframe id='client-frame-3' src='client.html' width='48%' height='220em'></iframe>
+    <iframe id='client-frame-4' src='client.html' width='48%' height='220em'></iframe -->
+</body></html>
