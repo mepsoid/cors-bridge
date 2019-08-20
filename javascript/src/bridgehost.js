@@ -84,6 +84,7 @@
         var requestHandlers = {};
         var requestQueue = [];
         var responseQueue = [];
+        var domain;
 
         var root = window;
         while (root !== root.parent) {
@@ -100,6 +101,7 @@
             var data = event.data;
             if (typeof(data) !== 'object') return;
             if (data[channelId] !== channelClients) return;
+            if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
             requestQueue = requestQueue.concat(messages);
@@ -140,6 +142,9 @@
                 messages: messages
             };
             data[channelId] = channelHost;
+            if (domain) {
+                data.domain = domain;
+            }
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
@@ -171,6 +176,19 @@
         }
 
         return {
+
+            /**
+             * Working domain
+             * 
+             * @param {*|undefined} newDomain set up new domain or read current
+             * @return {*} current domain
+             */
+            domain: function(newDomain) {
+                if (newDomain !== undefined) {
+                    domain = newDomain;
+                }
+                return domain;
+            },
 
             /**
              * Send event to all active clients

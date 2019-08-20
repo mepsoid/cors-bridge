@@ -16,6 +16,7 @@ package corsbridge {
 			
 			if (options) {
 				_tag = options['tag'];
+				_domain = options['domain'];
 			}
 			
 			// TODO catch and process exception if name already has been taken
@@ -28,6 +29,11 @@ package corsbridge {
 			return _tag;
 		}
 		
+		/** Working domain */
+		public function get domain():* {
+			return _domain;
+		}
+		
 		/**
 		 * Send request to host
 		 * 
@@ -36,7 +42,7 @@ package corsbridge {
 		 * @return request handler object
 		 */
 		public function request(command:String, ...rest):BridgeRequest {
-			var guid:String = BridgeUtils.uuid();
+			var guid:String = BridgeUtils.createGuid();
 			var handler:BridgeRequest = new BridgeRequest();
 			_requestHandlers[guid] = handler;
 			
@@ -46,7 +52,8 @@ package corsbridge {
 				command: command
 			};
 			if (rest.length > 0) request.data = rest;
-			if (tag) request.tag = tag;
+			if (tag != null) request.tag = tag;
+			if (domain != null) request.domain = _domain;
 			
 			_requestQueue.push(request);
 			processRequests();
@@ -59,7 +66,7 @@ package corsbridge {
 		 * @param command event type
 		 * @param handler event handler
 		 */
-		public function  onevent(command:String, handler:Function):void {
+		public function onevent(command:String, handler:Function):void {
 			if (handler != null) {
 				_eventHandlers[command] = handler;
 			} else {
@@ -87,6 +94,7 @@ package corsbridge {
 			var data:Object = content as Object;
 			if (!data) return;
 			if (!data.hasOwnProperty(CHANNEL_ID) || data[CHANNEL_ID] != CHANNEL_HOST) return;
+			if (domain != null && data.domain != domain) return;
 			
 			var messages:Array = data['messages'] as Array;
 			for (var i:int = 0; i < messages.length; ++i) {
@@ -167,6 +175,7 @@ package corsbridge {
 		}
 		
 		private var _tag:*;
+		private var _domain:*;
 		private var _eventQueue:Array = [];
 		private var _eventHandlers:Object = {};
 		private var _requestQueue:Array = [];

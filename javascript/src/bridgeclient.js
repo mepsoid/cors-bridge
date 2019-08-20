@@ -16,6 +16,7 @@
      * 
      * @typedef {object} BridgeOptions
      * @property {*=} tag client identifier for debugging
+     * @property {*=} domain working domain identifier
      */
 
     /**
@@ -25,6 +26,7 @@
      */
     function BridgeClient(options) {
         var tag = options.tag;
+        var domain = options.domain;
         var eventHandlers = {};
         var eventQueue = [];
         var requestQueue = [];
@@ -46,6 +48,7 @@
             var data = event.data;
             if (typeof(data) !== 'object') return;
             if (data[channelId] !== channelHost) return;
+            if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
             for (var i = 0; i < messages.length; ++i) {
@@ -89,6 +92,9 @@
                 messages: messages
             };
             data[channelId] = channelClients;
+            if (domain) {
+                data.domain = domain;
+            }
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
@@ -143,23 +149,18 @@
             }
         }
         
-        /** @link https://gist.github.com/kaizhu256/4482069 */
-        function uuid() {
-            // return uuid of form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-            var uuid = '', ii;
-            for (ii = 0; ii < 32; ++ii) {
-                switch (ii) {
-                    case 8:
-                    case 20:
+        // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+        function createGuid() {
+            var uuid = '';
+            for (var i = 0; i < 36; ++i) {
+                switch (i) {
+                    case 8: case 13: case 18: case 23:
                         uuid += '-';
-                        uuid += (Math.random() * 16 | 0).toString(16);
                         break;
-                    case 12:
-                        uuid += '-';
+                    case 14:
                         uuid += '4';
                         break;
-                    case 16:
-                        uuid += '-';
+                    case 19:
                         uuid += (Math.random() * 4 | 8).toString(16);
                         break;
                     default:
@@ -176,6 +177,13 @@
              */
             tag: function() {
                 return tag;
+            },
+
+            /**
+             * Working domain
+             */
+            domain: function() {
+                return domain;
             },
 
             /**
@@ -209,7 +217,7 @@
              * @return {BridgeCallbacks}
              */
             request: function(command) {
-                var guid = uuid();
+                var guid = createGuid();
                 var callbacks = {};
                 requestCallbacks[guid] = callbacks;
 

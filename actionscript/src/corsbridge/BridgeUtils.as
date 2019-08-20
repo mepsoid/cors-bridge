@@ -10,27 +10,22 @@ package corsbridge {
 		 * Universally unique id generator
 		 * 
 		 * @return uuid of form xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-		 * @link https://gist.github.com/kaizhu256/4482069
 		 */
-		public static function uuid():String {
+		public static function createGuid():String {
 			var uuid:String = '';
-			for (var i:int = 0; i < 32; ++i) {
+			for (var i:int = 0; i < 36; ++i) {
 				switch (i) {
-					case 8:
-					case 20:
+					case 8: case 13: case 18: case 23:
 						uuid += '-';
-						uuid += int(Math.random() * 16).toString(16);
 						break;
-					case 12:
-						uuid += '-';
+					case 14:
 						uuid += '4';
 						break;
-					case 16:
-						uuid += '-';
-						uuid += (int(Math.random() * 4) | 8).toString(16);
+					case 19:
+						uuid += (Math.random() * 4 | 8).toString(16);
 						break;
 					default:
-						uuid += int(Math.random() * 16).toString(16);
+						uuid += (Math.random() * 16 | 0).toString(16);
 					}
 			}
 			return uuid;
