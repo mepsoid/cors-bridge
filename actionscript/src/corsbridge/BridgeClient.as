@@ -64,10 +64,10 @@ package corsbridge {
 		}
 		
 		/**
-		 * Sign to host events
+		 * Sign to specific host events
 		 * 
 		 * @param command event type
-		 * @param handler event handler
+		 * @param handler specific events handler
 		 */
 		public function onevent(command:String, handler:Function):void {
 			if (handler != null) {
@@ -78,12 +78,22 @@ package corsbridge {
 		}
 		
 		/**
+		 * Sign to all host events
+		 * 
+		 * @param handler handler for all events
+		 */
+		public function onevents(handler:Function):void {
+			_eventEvery = handler;
+		}
+		
+		/**
 		 * Shutdown and wipe out bridge
 		 * 
 		 * Must be called in case of client widget stops its job
 		 */
 		public function destroy():void {
 			ExternalInterface.call(METHOD_UNSUBSCRIBE, METHOD_RECEIVER);
+			_eventEvery = null;
 			_eventHandlers = null;
 			_requestCallbacks = null;
 			_incomingQueue = null;
@@ -142,13 +152,13 @@ package corsbridge {
 				} else {
 					// event
 					var command:String = message.command;
-					var handler:Function = _eventHandlers[command];
-					if (handler == null) continue;
+					if (_eventEvery != null) {
+						_eventEvery(command, data);
+					}
 					
-					if (data != null) {
+					var handler:Function = _eventHandlers[command];
+					if (handler != null) {
 						handler(data);
-					} else {
-						handler();
 					}
 				}
 			}
@@ -180,6 +190,7 @@ package corsbridge {
 		private var _domain:String;
 		private var _gatherInterval:int;
 		private var _gatherDirty:Boolean = true;
+		private var _eventEvery:Function;
 		private var _eventHandlers:Object = {};
 		private var _requestCallbacks:Object = {};
 		private var _incomingQueue:Array = [];

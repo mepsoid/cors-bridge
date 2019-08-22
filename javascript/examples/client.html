@@ -35,6 +35,10 @@
         bridge.onevent('hello', function(event) {
             console.log(`@${bridge.tag()} hello:`, event);
         });
+
+        bridge.onevents(function(command, data) {
+            console.log(`@${bridge.tag()} every ${command}:`, data);
+        });
     </script>
 </head><body onload="selfIdent()">
     <h2 id='header'>Widget</h2>

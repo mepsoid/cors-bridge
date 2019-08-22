@@ -30,6 +30,7 @@
         var domain = options ? options.domain : '';
         var gatherInterval = options && options.gather > 4 ? options.gather : 4;
         var gatherDirty = false;
+        var eventEvery;
         var eventHandlers = {};
         var requestCallbacks = {};
         var incomingQueue = [];
@@ -96,13 +97,13 @@
                 } else {
                     // event
                     var command = message.command;
-                    var handler = eventHandlers[command];
-                    if (!handler) continue;
+                    if (eventEvery) {
+                        eventEvery(command, data);
+                    }
 
-                    if (data !== undefined) {
+                    var handler = eventHandlers[command];
+                    if (handler) {
                         handler(data);
-                    } else {
-                        handler();
                     }
                 }
             }
@@ -231,9 +232,9 @@
             },
 
             /**
-             * Host event callback
+             * Host specific event callback
              * 
-             * @callback BridgeCallbackEvent
+             * @callback BridgeSpecificEvent
              * @param {*=} data event data
              */
                 
@@ -241,7 +242,7 @@
              * Sign to host events
              * 
              * @param {string} command event type
-             * @param {BridgeCallbackEvent} handler event handler
+             * @param {BridgeSpecificEvent} handler specific events handler
              */
             onevent: function(command, handler) {
                 if (handler) {
@@ -249,6 +250,23 @@
                 } else {
                     delete eventHandlers[command];
                 }
+            },
+
+            /**
+             * Host every event handler
+             * 
+             * @callback BridgeSpecificEvent
+             * @param {string} command event type
+             * @param {*=} data event data
+             */
+
+            /**
+             * Sign on all possible events
+             * 
+             * @param {BridgeEveryEvent} handler handler for all events
+             */
+            onevents: function(handler) {
+                eventEvery = handler;
             },
 
             /**
@@ -263,6 +281,7 @@
                     window.detachEvent('onmessage', onMessage); // IE 8
                 }
 
+                eventEvery = null;
                 eventHandlers = null;
                 requestCallbacks = null;
                 incomingQueue = null;
