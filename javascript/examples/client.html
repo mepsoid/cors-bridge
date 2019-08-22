@@ -8,7 +8,8 @@
     <script src='../src/bridgeclient.js'></script>
     <script>
         var bridge = BridgeClient({
-            tag: Math.random() * 1000 | 0
+            tag: Math.random() * 1000 | 0,
+            gather: 2000
         });
 
         function selfIdent() {

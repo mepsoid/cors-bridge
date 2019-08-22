@@ -16,7 +16,8 @@
      * 
      * @typedef {object} BridgeOptions
      * @property {*=} tag client identifier for debugging
-     * @property {*=} domain working domain identifier
+     * @property {string} domain working domain identifier
+     * @property {number} gather time interval (ms) for gathering outgoing data
      */
 
     /**
@@ -25,13 +26,14 @@
      * @param {BridgeOptions=} options initial setup options
      */
     function BridgeClient(options) {
-        var tag = options.tag;
-        var domain = options.domain;
+        var tag = options ? options.tag : undefined;
+        var domain = options ? options.domain : '';
+        var gatherInterval = options && options.gather > 4 ? options.gather : 4;
+        var gatherDirty = false;
         var eventHandlers = {};
-        var eventQueue = [];
-        var requestQueue = [];
         var requestCallbacks = {};
-        var responseQueue = [];
+        var incomingQueue = [];
+        var outgoingQueue = [];
 
         var root = window;
         while (root !== root.parent) {
@@ -51,50 +53,80 @@
             if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
-            for (var i = 0; i < messages.length; ++i) {
-                var message = messages[i];
-                if (message.guid) {
-                    responseQueue.push(message);
-                } else {
-                    eventQueue.push(message);
-                }
-            }
-            processEvents();
-            processResponses();
+            incomingQueue = incomingQueue.concat(messages);
+            processIncoming();
         }
         
-        function processEvents() {
-            if (!eventQueue) return;
+        function processIncoming() {
+            if (!incomingQueue) return;
 
-            var events = eventQueue.concat();
-            eventQueue = [];
-            for (var i = 0; i < events.length; ++i) {
-                var event = events[i];
-                var command = event.command;
-                var handler = eventHandlers[command];
-                if (!handler) continue;
+            var messages = incomingQueue.concat();
+            incomingQueue = [];
+            for (var i = 0; i < messages.length; ++i) {
+                var message = messages[i];
+                var guid = message.guid;
+                var data = message.data;
+                if (guid) {
+                    // response
+                    var callbacks = requestCallbacks[guid];
+                    if (!callbacks) continue;
 
-                var data = event.data;
-                if (data !== undefined) {
-                    handler(data);
+                    switch (message.type) {
+                        case 'progress':
+                            if (callbacks.onprogress) {
+                                callbacks.onprogress(data);
+                            }
+                            break;
+
+                        case 'error':
+                            delete requestCallbacks[guid];
+                            if (callbacks.onresponse) {
+                                callbacks.onresponse(data);
+                            }
+                            break;
+
+                        case 'response':
+                            delete requestCallbacks[guid];
+                            data.unshift(null); // no error
+                            if (callbacks.onresponse) {
+                                callbacks.onresponse.apply(this, data);
+                            }
+                            break;
+                    }
                 } else {
-                    handler();
+                    // event
+                    var command = message.command;
+                    var handler = eventHandlers[command];
+                    if (!handler) continue;
+
+                    if (data !== undefined) {
+                        handler(data);
+                    } else {
+                        handler();
+                    }
                 }
             }
         }
 
-        function processRequests() {
-            if (!requestQueue) return;
+        function processOutgoing() {
+            if (!outgoingQueue || gatherDirty) return;
 
-            var messages = requestQueue.concat();
-            requestQueue = [];
+            gatherDirty = true;
+            setTimeout(commitOutgoing, gatherInterval);
+        }
+
+        function commitOutgoing() {
+            gatherDirty = false;
+            if (!outgoingQueue) return;
+
+            var messages = outgoingQueue.concat();
+            outgoingQueue = [];
             var data = {
                 messages: messages
             };
             data[channelId] = channelClients;
-            if (domain) {
-                data.domain = domain;
-            }
+            if (domain) data.domain = domain;
+
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
@@ -112,43 +144,6 @@
             return collected;
         }
 
-        function processResponses() {
-            if (!responseQueue) return;
-
-            var responses = responseQueue.concat();
-            responseQueue = [];
-            for (var i = 0; i < responses.length; ++i) {
-                var response = responses[i];
-                var guid = response.guid;
-                var callbacks = requestCallbacks[guid];
-                if (!callbacks) continue;
-
-                var data = response.data;
-                switch (response.type) {
-                    case 'progress':
-                        if (callbacks.onprogress) {
-                            callbacks.onprogress(data);
-                        }
-                        break;
-
-                    case 'error':
-                        delete requestCallbacks[guid];
-                        if (callbacks.onresponse) {
-                            callbacks.onresponse(data);
-                        }
-                        break;
-
-                    case 'response':
-                        delete requestCallbacks[guid];
-                        data.unshift(null); // no error
-                        if (callbacks.onresponse) {
-                            callbacks.onresponse.apply(this, data);
-                        }
-                        break;
-                }
-            }
-        }
-        
         // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
         function createGuid() {
             var uuid = '';
@@ -226,13 +221,12 @@
                     guid: guid,
                     command: command + ''
                 };
-                var args = Array.prototype.slice.call(arguments, 1);
-                if (args.length > 0) {
-                    request.data = args;
-                }
                 if (tag) request.tag = tag;
-                requestQueue.push(request);
-                processRequests();
+                var args = Array.prototype.slice.call(arguments, 1);
+                if (args.length > 0) request.data = args;
+
+                outgoingQueue.push(request);
+                processOutgoing();
                 return callbacks;
             },
 
@@ -268,12 +262,11 @@
                 } else {
                     window.detachEvent('onmessage', onMessage); // IE 8
                 }
-        
+
                 eventHandlers = null;
-                eventQueue = null;
-                requestQueue = null;
                 requestCallbacks = null;
-                responseQueue = null;
+                incomingQueue = null;
+                outgoingQueue = null;
             }
         }
     }

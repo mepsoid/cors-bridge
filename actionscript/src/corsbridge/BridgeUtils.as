@@ -1,9 +1,5 @@
 package corsbridge {
 	
-	/**
-	 * 
-	 * @author meps
-	 */
 	public class BridgeUtils {
 		
 		/**

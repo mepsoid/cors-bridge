@@ -2,9 +2,11 @@ package corsbridge {
 	
 	import flash.external.ExternalInterface;
 	import flash.system.Security;
+	import flash.utils.setTimeout;
 	
 	/**
-	 * ...
+	 * Client bridge
+	 * 
 	 * @author meps
 	 */
 	public class BridgeClient {
@@ -17,6 +19,8 @@ package corsbridge {
 			if (options) {
 				_tag = options['tag'];
 				_domain = options['domain'];
+				_gatherInterval = parseInt(options['gather']);
+				if (_gatherInterval < 4) _gatherInterval = 4;
 			}
 			
 			// TODO catch and process exception if name already has been taken
@@ -30,7 +34,7 @@ package corsbridge {
 		}
 		
 		/** Working domain */
-		public function get domain():* {
+		public function get domain():String {
 			return _domain;
 		}
 		
@@ -44,19 +48,18 @@ package corsbridge {
 		public function request(command:String, ...rest):BridgeRequest {
 			var guid:String = BridgeUtils.createGuid();
 			var handler:BridgeRequest = new BridgeRequest();
-			_requestHandlers[guid] = handler;
+			_requestCallbacks[guid] = handler;
 			
 			var request:Object = {
 				ts: new Date().time,
 				guid: guid,
 				command: command
 			};
-			if (rest.length > 0) request.data = rest;
 			if (tag != null) request.tag = tag;
-			if (domain != null) request.domain = _domain;
+			if (rest.length > 0) request.data = rest;
 			
-			_requestQueue.push(request);
-			processRequests();
+			_outgoingQueue.push(request);
+			processOutgoing();
 			return handler;
 		}
 		
@@ -81,11 +84,10 @@ package corsbridge {
 		 */
 		public function destroy():void {
 			ExternalInterface.call(METHOD_UNSUBSCRIBE, METHOD_RECEIVER);
-			_eventQueue = null;
 			_eventHandlers = null;
-			_requestQueue = null;
-			_requestHandlers = null;
-			_responseQueue = null;
+			_requestCallbacks = null;
+			_incomingQueue = null;
+			_outgoingQueue = null;
 		}
 		
 		////////////////////////////////////////////////////////////////////////
@@ -93,94 +95,95 @@ package corsbridge {
 		private function onMessage(content:*):void {
 			var data:Object = content as Object;
 			if (!data) return;
-			if (!data.hasOwnProperty(CHANNEL_ID) || data[CHANNEL_ID] != CHANNEL_HOST) return;
+			if (data[CHANNEL_ID] != CHANNEL_HOST) return;
 			if (domain != null && data.domain != domain) return;
 			
 			var messages:Array = data['messages'] as Array;
+			_incomingQueue = _incomingQueue.concat(messages);
+			processIncoming();
+		}
+		
+		private function processIncoming():void {
+			if (_incomingQueue.length == 0) return;
+			
+			var messages:Array = _incomingQueue.concat();
+			_incomingQueue.length = 0;
 			for (var i:int = 0; i < messages.length; ++i) {
 				var message:Object = messages[i];
-				if (message.guid) {
-					_responseQueue.push(message);
+				var guid:String = message.guid;
+				var data:Object = message.data;
+				if (guid != null) {
+					// response
+					var callbacks:BridgeRequest = _requestCallbacks[guid];
+					if (!callbacks) continue;
+					
+					switch (message.type) {
+						case 'progress':
+							if (callbacks.onprogress != null) {
+								callbacks.onprogress(data);
+							}
+							break;
+						
+						case 'error':
+							delete _requestCallbacks[guid];
+							if (callbacks.onresponse != null) {
+								callbacks.onresponse(data);
+							}
+							break;
+						
+						case 'response':
+							delete _requestCallbacks[guid];
+							var rest:Array = [null].concat(data as Array);
+							if (callbacks.onresponse != null) {
+								callbacks.onresponse.apply(null, rest);
+							}
+							break;
+					}
 				} else {
-					_eventQueue.push(message);
+					// event
+					var command:String = message.command;
+					var handler:Function = _eventHandlers[command];
+					if (handler == null) continue;
+					
+					if (data != null) {
+						handler(data);
+					} else {
+						handler();
+					}
 				}
 			}
-			processEvents();
-			processResponses();
 		}
 		
-		private function processEvents():void {
-			if (_eventQueue.length == 0) return;
+		private function processOutgoing():void {
+			if (_outgoingQueue.length == 0 || _gatherDirty) return;
 			
-			var events:Array = _eventQueue.concat();
-			_eventQueue.length = 0;
-			for (var i:int = 0; i < events.length; ++i) {
-				var event:Object = events[i];
-				var command:String = event.command;
-				var handler:Function = _eventHandlers[command];
-				if (handler == null) continue;
-				
-				var data:Object = event.data;
-				handler(data);
-			}
+			_gatherDirty = true;
+			setTimeout(commitOutgoing, _gatherInterval);
 		}
 		
-		private function processRequests():void {
-			if (_requestQueue.length == 0) return;
+		private function commitOutgoing():void {
+			_gatherDirty = false;
+			if (_outgoingQueue.length == 0) return;
 			
-			var messages:Array = _requestQueue.concat();
-			_requestQueue.length = 0;
+			var messages:Array = _outgoingQueue.concat();
+			_outgoingQueue.length = 0;
 			var data:Object = {
 				messages: messages
 			};
 			data[CHANNEL_ID] = CHANNEL_CLIENTS;
+			if (domain != null) data.domain = domain;
+			
 			ExternalInterface.call(METHOD_SENDER, data);
 		}
 		
-		private function processResponses():void {
-			if (_responseQueue.length == 0) return;
-			
-			var responses:Array = _responseQueue.concat();
-			_responseQueue.length = 0;
-			for (var i:int = 0; i < responses.length; ++i) {
-				var response:Object = responses[i];
-				var guid:String = response.guid;
-				var handler:BridgeRequest = _requestHandlers[guid];
-				if (!handler) continue;
-				
-				var data:Object = response.data;
-				switch (response.type) {
-					case 'progress':
-						if (handler.onprogress != null) {
-							handler.onprogress(data);
-						}
-						break;
-					
-					case 'error':
-						delete _requestHandlers[guid];
-						if (handler.onresponse != null) {
-							handler.onresponse(data);
-						}
-						break;
-					
-					case 'response':
-						delete _requestHandlers[guid];
-						var rest:Array = [null].concat(data as Array);
-						if (handler.onresponse != null) {
-							handler.onresponse.apply(null, rest);
-						}
-						break;
-				}
-			}
-		}
-		
 		private var _tag:*;
-		private var _domain:*;
-		private var _eventQueue:Array = [];
+		private var _domain:String;
+		private var _gatherInterval:int;
+		private var _gatherDirty:Boolean = true;
 		private var _eventHandlers:Object = {};
-		private var _requestQueue:Array = [];
-		private var _requestHandlers:Object = {};
-		private var _responseQueue:Array = [];
+		private var _requestCallbacks:Object = {};
+		private var _incomingQueue:Array = [];
+		private var _outgoingQueue:Array = [];
 		
 		private static const CHANNEL_HOST:String = 'CORSBridgeHost';
 		private static const CHANNEL_CLIENTS:String = 'CORSBridgeClient';

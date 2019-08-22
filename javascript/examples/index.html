@@ -13,7 +13,8 @@
             var args = Array.prototype.slice.call(arguments);
             args.shift();
             console.log(`@${request.tag()} greet:`, args);
-        })
+        });
+        BridgeHost.gather(2000);
     </script>
 </head><body>
     <h2>Host</h2>

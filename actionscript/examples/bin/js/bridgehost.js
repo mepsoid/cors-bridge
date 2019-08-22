@@ -80,10 +80,12 @@
      * Host bridge
      */
     function BridgeHost() {
-        var eventQueue = [];
+        var domain;
+        var gatherInterval = 4;
+        var gatherDirty = false;
         var requestHandlers = {};
-        var requestQueue = [];
-        var responseQueue = [];
+        var incomingQueue = [];
+        var outgoingQueue = [];
 
         var root = window;
         while (root !== root.parent) {
@@ -100,24 +102,25 @@
             var data = event.data;
             if (typeof(data) !== 'object') return;
             if (data[channelId] !== channelClients) return;
+            if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
-            requestQueue = requestQueue.concat(messages);
-            processRequests();
+            incomingQueue = incomingQueue.concat(messages);
+            processIncoming();
         }
 
-        function processRequests() {
-            if (!requestQueue) return;
+        function processIncoming() {
+            if (!incomingQueue) return;
 
-            var requests = requestQueue.concat();
-            requestQueue = [];
-            for (var i = 0; i < requests.length; ++i) {
-                var request = requests[i];
-                var handler = requestHandlers[request.command];
+            var messages = incomingQueue.concat();
+            incomingQueue = [];
+            for (var i = 0; i < messages.length; ++i) {
+                var message = messages[i];
+                var handler = requestHandlers[message.command];
                 if (!handler) continue;
 
-                var holder = BridgeHostRequest(request.guid, request.tag, appendReponse);
-                var data = request.data;
+                var holder = BridgeHostRequest(message.guid, message.tag, appendReponse);
+                var data = message.data;
                 if (data) {
                     handler.apply(this, [holder].concat(data));
                 } else {
@@ -127,19 +130,25 @@
             }
         }
 
-        function processEvents() {
-            if (!eventQueue) return;
+        function processOutgoing() {
+            if (!outgoingQueue || gatherDirty) return;
 
-            var events = eventQueue.concat();
-            eventQueue = [];
-            sendMessages(events);
+            gatherDirty = true;
+            setTimeout(commitOutgoing, gatherInterval);
         }
 
-        function sendMessages(messages) {
+        function commitOutgoing() {
+            gatherDirty = false;
+            if (!outgoingQueue) return;
+
+            var messages = outgoingQueue.concat();
+            outgoingQueue = [];
             var data = {
                 messages: messages
             };
             data[channelId] = channelHost;
+            if (domain) data.domain = domain;
+
             var targets = collectTargets(root);
             for (var i = 0; i < targets.length; ++i) {
                 var target = targets[i];
@@ -158,19 +167,31 @@
         }
 
         function appendReponse(message) {
-            responseQueue.push(message);
-            processResponses();
-        }
-
-        function processResponses() {
-            if (!responseQueue) return;
-
-            var responses = responseQueue.concat();
-            responseQueue = [];
-            sendMessages(responses);
+            outgoingQueue.push(message);
+            processOutgoing();
         }
 
         return {
+
+            /**
+             * Working domain
+             * 
+             * @param {string|undefined} newDomain set up new domain or read current
+             * @return {*} current domain
+             */
+            domain: function(newDomain) {
+                if (newDomain !== undefined) domain = newDomain;
+                return domain;
+            },
+
+            /**
+             * 
+             * @param {number|undefined} newGather set up new blockgathering time 
+             */
+            gather: function(newGather) {
+                if (newGather !== undefined) gatherInterval = newGather > 4 ? newGather : 4;
+                return gatherInterval;
+            },
 
             /**
              * Send event to all active clients
@@ -184,8 +205,9 @@
                     command: command + ''
                 };
                 if (data !== undefined) event.data = data;
-                eventQueue.push(event);
-                processEvents();
+
+                outgoingQueue.push(event);
+                processOutgoing();
             },
 
             /**

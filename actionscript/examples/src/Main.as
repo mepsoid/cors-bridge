@@ -35,7 +35,8 @@ package {
 			stage.scaleMode = StageScaleMode.NO_SCALE;
 			
 			bridge = new BridgeClient({
-				tag: int(Math.random() * 1000)
+				tag: int(Math.random() * 1000),
+				gather: 2000
 			});
 			
 			bridge.onevent('hello', function(event:Object):void {
