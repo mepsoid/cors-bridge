@@ -2,6 +2,7 @@ package corsbridge {
 	
 	import flash.external.ExternalInterface;
 	import flash.system.Security;
+	import flash.utils.getQualifiedClassName;
 	import flash.utils.setTimeout;
 	
 	/**
@@ -78,7 +79,7 @@ package corsbridge {
 		}
 		
 		/**
-		 * Sign to all host events
+		 * Sign on all possible events
 		 * 
 		 * @param handler handler for all events
 		 */
@@ -103,13 +104,13 @@ package corsbridge {
 		////////////////////////////////////////////////////////////////////////
 		
 		private function onMessage(content:*):void {
+			if (getQualifiedClassName(content) != 'Object') return;
 			var data:Object = content as Object;
-			if (!data) return;
 			if (data[CHANNEL_ID] != CHANNEL_HOST) return;
 			if (domain != null && data.domain != domain) return;
 			
 			var messages:Array = data['messages'] as Array;
-			_incomingQueue = _incomingQueue.concat(messages);
+			if (messages != null) _incomingQueue = _incomingQueue.concat(messages);
 			processIncoming();
 		}
 		
@@ -120,8 +121,10 @@ package corsbridge {
 			_incomingQueue.length = 0;
 			for (var i:int = 0; i < messages.length; ++i) {
 				var message:Object = messages[i];
-				var guid:String = message.guid;
-				var data:Object = message.data;
+				if (message == null) continue;
+				
+				var guid:String = message['guid'];
+				var data:Object = message['data'];
 				if (guid != null) {
 					// response
 					var callbacks:BridgeRequest = _requestCallbacks[guid];
@@ -151,15 +154,13 @@ package corsbridge {
 					}
 				} else {
 					// event
-					var command:String = message.command;
-					if (_eventEvery != null) {
-						_eventEvery(command, data);
-					}
+					var command:String = message['command'];
+					if (command == null) continue;
+					
+					if (_eventEvery != null) _eventEvery(command, data)
 					
 					var handler:Function = _eventHandlers[command];
-					if (handler != null) {
-						handler(data);
-					}
+					if (handler != null) handler(data);
 				}
 			}
 		}
@@ -189,7 +190,7 @@ package corsbridge {
 		private var _tag:*;
 		private var _domain:String;
 		private var _gatherInterval:int;
-		private var _gatherDirty:Boolean = true;
+		private var _gatherDirty:Boolean = false;
 		private var _eventEvery:Function;
 		private var _eventHandlers:Object = {};
 		private var _requestCallbacks:Object = {};

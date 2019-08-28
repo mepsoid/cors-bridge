@@ -68,7 +68,7 @@ package {
 			button1.move(10, label1.y + label1.height + 15);
 			button1.height = 26;
 			button1.addEventListener(MouseEvent.CLICK, function(event:Event):void {
-				procRequest(bridge.request('greet'));
+				procRequest('greet');
 			});
 			addChild(button1);
 			
@@ -77,7 +77,7 @@ package {
 			button2.move(button1.x + button1.width + 5, button1.y);
 			button2.height = button1.height;
 			button2.addEventListener(MouseEvent.CLICK, function(event:Event):void {
-				procRequest(bridge.request('greet', 'howdy'));
+				procRequest('greet', 'howdy');
 			});
 			addChild(button2);
 			
@@ -86,7 +86,7 @@ package {
 			button3.move(button2.x + button2.width + 5, button1.y);
 			button3.height = button1.height;
 			button3.addEventListener(MouseEvent.CLICK, function(event:Event):void {
-				procRequest(bridge.request('greet', [0, 1, true], undefined, false, -4378.323, {a:{aa:'a', ab:23, ac:null}, b:[]}, NaN));
+				procRequest('greet', [0, 1, true], undefined, false, -4378.323, {a:{aa:'a', ab:23, ac:null}, b:[]}, NaN);
 			});
 			addChild(button3);
 			
@@ -107,7 +107,9 @@ package {
 			addChild(button4);
 		}
 		
-		private function procRequest(request:BridgeRequest):void {
+		private function procRequest(...params):void {
+			log('@' + bridge.tag, params);
+			var request:BridgeRequest = bridge.request.apply(this, params);
 			request.onresponse = function(error:Object, ...rest):void {
 				if (error) {
 					log('@' + bridge.tag, 'error:', error);

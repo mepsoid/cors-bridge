@@ -54,17 +54,19 @@
             if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
-            incomingQueue = incomingQueue.concat(messages);
+            if (messages) incomingQueue = incomingQueue.concat(messages);
             processIncoming();
         }
         
         function processIncoming() {
-            if (!incomingQueue) return;
+            if (incomingQueue.length === 0) return;
 
             var messages = incomingQueue.concat();
             incomingQueue = [];
             for (var i = 0; i < messages.length; ++i) {
                 var message = messages[i];
+                if (!message) continue;
+
                 var guid = message.guid;
                 var data = message.data;
                 if (guid) {
@@ -97,20 +99,18 @@
                 } else {
                     // event
                     var command = message.command;
-                    if (eventEvery) {
-                        eventEvery(command, data);
-                    }
+                    if (!command) continue;
+
+                    if (eventEvery) eventEvery(command, data);
 
                     var handler = eventHandlers[command];
-                    if (handler) {
-                        handler(data);
-                    }
+                    if (handler) handler(data);
                 }
             }
         }
 
         function processOutgoing() {
-            if (!outgoingQueue || gatherDirty) return;
+            if (outgoingQueue.length === 0 || gatherDirty) return;
 
             gatherDirty = true;
             setTimeout(commitOutgoing, gatherInterval);
@@ -118,7 +118,7 @@
 
         function commitOutgoing() {
             gatherDirty = false;
-            if (!outgoingQueue) return;
+            if (outgoingQueue.length === 0) return;
 
             var messages = outgoingQueue.concat();
             outgoingQueue = [];
@@ -290,6 +290,6 @@
         }
     }
 
-    if (typeof window.BridgeClient === 'undefined') window.BridgeClient = BridgeClient;
+    if (typeof(window.BridgeClient) === 'undefined') window.BridgeClient = BridgeClient;
 
 })();
