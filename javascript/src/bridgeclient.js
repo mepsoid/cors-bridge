@@ -10,6 +10,7 @@
     var channelHost = 'CORSBridgeHost';
     var channelClients = 'CORSBridgeClient';
     var channelId = 'cors_bridge_channel';
+    var frameName = 'cb617878-1956-4d6a-b087-dc73b223960d';
 
     /**
      * Client bridge setup options
@@ -41,10 +42,15 @@
             root = root.parent;
         }
         
-        if (window.addEventListener) {
-            window.addEventListener('message', onMessage);
+        var frame = document.createElement('iframe');
+        frame.setAttribute('name', frameName);
+        frame.style.display = 'none';
+        document.firstChild.appendChild(frame);
+        var frameWindow = frame.contentWindow;
+        if (frameWindow.addEventListener) {
+            frameWindow.addEventListener('message', onMessage);
         } else {
-            window.attachEvent('onmessage', onMessage); // IE 8
+            frameWindow.attachEvent('onmessage', onMessage); // IE 8
         }
 
         function onMessage(event) {
@@ -128,21 +134,12 @@
             data[channelId] = channelClients;
             if (domain) data.domain = domain;
 
-            var targets = collectTargets(root);
-            for (var i = 0; i < targets.length; ++i) {
-                var target = targets[i];
+            var targets = [root];
+            while (targets.length > 0) {
+                var target = targets.shift();
+                targets = targets.concat(Array.prototype.slice.call(target.frames));
                 target.postMessage(data, '*');
             }
-        }
-
-        function collectTargets(from) {
-            var collected = [from];
-            for (var i = 0; i < collected.length; ++i) {
-                var target = collected[i];
-                var targets = Array.prototype.slice.call(target.frames);
-                collected = collected.concat(targets);
-            }
-            return collected;
         }
 
         // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
