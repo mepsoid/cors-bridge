@@ -45,7 +45,7 @@
         var frame = document.createElement('iframe');
         frame.setAttribute('name', frameName);
         frame.style.display = 'none';
-        document.firstChild.appendChild(frame);
+        document.head.appendChild(frame);
         var frameWindow = frame.contentWindow;
         if (frameWindow.addEventListener) {
             frameWindow.addEventListener('message', onMessage);
@@ -138,7 +138,8 @@
             while (targets.length > 0) {
                 var target = targets.shift();
                 targets = targets.concat(Array.prototype.slice.call(target.frames));
-                target.postMessage(data, '*');
+                if (target.name === frameName)
+                    target.postMessage(data, '*');
             }
         }
 
