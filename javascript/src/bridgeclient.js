@@ -137,13 +137,24 @@
             var targets = [root];
             while (targets.length > 0) {
                 var target = targets.shift();
-                var frame = target[FRAME_NAME];
-                for (var i = 0; i < target.length; ++i) {
-                    var item = target[i];
-                    if (item !== frame) targets.push(item);
+                if (target.length > 0) {
+                    var frame = getFrame(target);
+                    for (var i = 0; i < target.length; ++i) {
+                        var item = target[i];
+                        if (item !== frame) targets.push(item);
+                    }
+                    if (frame) frame.postMessage(data, '*');
                 }
-                if (frame) frame.postMessage(data, '*');
             }
+        }
+
+        // Workaround for missing attribute error in local filesystem
+        function getFrame(target) {
+            var frame;
+            try {
+                frame = target[FRAME_NAME];
+            } catch(err) { }
+            return frame;
         }
 
         // xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
