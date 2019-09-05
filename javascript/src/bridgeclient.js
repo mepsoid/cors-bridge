@@ -7,10 +7,10 @@
 (function() {
     'use strict';
 
-    var channelHost = 'CORSBridgeHost';
-    var channelClients = 'CORSBridgeClient';
-    var channelId = 'cors_bridge_channel';
-    var frameName = 'cb617878-1956-4d6a-b087-dc73b223960d';
+    var CHANNEL_KEY = 'cors_bridge_channel';
+    var CHANNEL_HOST = 'ca5cd683-f69b-4852-b60d-a9c45bf83756';
+    var CHANNEL_CLIENTS = '5161b727-51e9-4e65-8b2f-511e39eb5f29';
+    var FRAME_NAME = 'cb617878-1956-4d6a-b087-dc73b223960d';
 
     /**
      * Client bridge setup options
@@ -43,7 +43,7 @@
         }
         
         var frame = document.createElement('iframe');
-        frame.setAttribute('name', frameName);
+        frame.setAttribute('name', FRAME_NAME);
         frame.style.display = 'none';
         document.head.appendChild(frame);
         var frameWindow = frame.contentWindow;
@@ -56,7 +56,7 @@
         function onMessage(event) {
             var data = event.data;
             if (typeof(data) !== 'object') return;
-            if (data[channelId] !== channelHost) return;
+            if (data[CHANNEL_KEY] !== CHANNEL_HOST) return;
             if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
@@ -131,15 +131,18 @@
             var data = {
                 messages: messages
             };
-            data[channelId] = channelClients;
+            data[CHANNEL_KEY] = CHANNEL_CLIENTS;
             if (domain) data.domain = domain;
 
             var targets = [root];
             while (targets.length > 0) {
                 var target = targets.shift();
-                targets = targets.concat(Array.prototype.slice.call(target.frames));
-                if (target.name === frameName)
-                    target.postMessage(data, '*');
+                var frame = target[FRAME_NAME];
+                for (var i = 0; i < target.length; ++i) {
+                    var item = target[i];
+                    if (item !== frame) targets.push(item);
+                }
+                if (frame) frame.postMessage(data, '*');
             }
         }
 
@@ -273,10 +276,10 @@
              * Must be called in case of client widget stops its job
              */
             destroy: function() {
-                if (window.removeEventListener) {
-                    window.removeEventListener('message', onMessage);
+                if (frameWindow.removeEventListener) {
+                    frameWindow.removeEventListener('message', onMessage);
                 } else {
-                    window.detachEvent('onmessage', onMessage); // IE 8
+                    frameWindow.detachEvent('onmessage', onMessage); // IE 8
                 }
 
                 eventEvery = null;
