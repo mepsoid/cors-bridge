@@ -93,10 +93,13 @@
             root = root.parent;
         }
 
-        var frame = document.createElement('iframe');
-        frame.setAttribute('name', FRAME_NAME);
-        frame.style.display = 'none';
-        document.head.appendChild(frame);
+        var frame = document.getElementsByName(FRAME_NAME)[0];
+        if (!frame) {
+            frame = document.createElement('iframe');
+            frame.setAttribute('name', FRAME_NAME);
+            frame.style.display = 'none';
+            document.head.appendChild(frame);
+        }
         var frameWindow = frame.contentWindow;
         if (frameWindow.addEventListener) {
             frameWindow.addEventListener('message', onMessage);

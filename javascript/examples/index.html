@@ -4,9 +4,13 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Open Sans', sans-serif; }
-        h2 { margin: 0; padding: 0.3rem 0.6rem; background-color:coral; }
+        h2 { margin: 0; padding: 0.3rem 0.6rem; }
+        .host { background-color:coral; }
+        .client { background-color:yellowgreen; }
     </style>
     <script src='../src/bridgehost.js'></script>
+    <script src='../src/bridgeclient.js'></script>
+    <script src='client.js'></script>
     <script>
         var callbacks;
         BridgeHost.onrequest('greet', function(request, rest) {
@@ -18,7 +22,7 @@
         BridgeHost.gather(2000);
     </script>
 </head><body>
-    <h2>Host</h2>
+    <h2 class='host'>Host</h2>
     <p>Broadcast event to clients:</p>
     <button onclick="BridgeHost.dispatch('hello')">EVENT</button>
     <button onclick="BridgeHost.dispatch('hello', 'world')">EVENT primitive</button>
@@ -36,9 +40,15 @@
     <button onclick="callbacks.response(404)">ERROR primitive</button>
     <button onclick="callbacks.response({ code:123, message:'Wow! Such much'})">ERROR {object}</button>
     <hr/>
-    <iframe id='client-frame-1' src='client.html' width='48%' height='220em' name='first'></iframe>
-    <iframe id='client-frame-2' src='client.html' width='48%' height='220em' name='second'></iframe>
-    <br/>
-    <iframe id='client-frame-3' src='client.html' width='48%' height='220em' name='third'></iframe>
+    <h2 id='header' class='client'>Client</h2>
+    <p>Send request to host:</p>
+    <button onclick="procRequest(bridge.request('greet'))">REQUEST</button>
+    <button onclick="procRequest(bridge.request('greet', 'howdy'))">REQUEST primitive</button>
+    <button onclick="procRequest(bridge.request('greet', [0, 1, true], undefined, false, -4378.323, {a:{aa:'a', ab:23, ac:null}, b:[]}, NaN))">REQUEST ...rest</button>
+    </br>
+    <p>Destroy self bridge:</p>
+    <button onclick="bridge.destroy()">DESTROY</button>
+    <hr/>
+    <iframe id='client-frame-1' src='client.html' width='48%' height='220em' name='third'></iframe>
     <iframe id='wrapper-frame' src='wrapper.html' width='48%' height='220em' name='fourth'></iframe>
 </body></html>

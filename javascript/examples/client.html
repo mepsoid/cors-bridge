@@ -4,45 +4,13 @@
     <link href="https://fonts.googleapis.com/css?family=Open+Sans&display=swap" rel="stylesheet">
     <style>
         * { font-family: 'Open Sans', sans-serif; }
-        h2 { margin: 0; padding: 0.3rem 0.6rem; background-color:yellowgreen; }
+        h2 { margin: 0; padding: 0.3rem 0.6rem; }
+        .client { background-color:yellowgreen; }
     </style>
     <script src='../src/bridgeclient.js'></script>
-    <script>
-        var bridge = BridgeClient({
-            tag: Math.random() * 1000 | 0,
-            gather: 2000
-        });
-
-        function selfIdent() {
-            var header = document.getElementById('header');
-            header.innerHTML += ' @' + bridge.tag();
-        }
-
-        function procRequest(request) {
-            request.onresponse = function(error, rest) {
-                if (error) {
-                    console.log(`@${bridge.tag()} error:`, error);
-                } else {
-                    var args = Array.prototype.slice.call(arguments);
-                    args.shift();
-                    console.log(`@${bridge.tag()} response:`, args);
-                }
-            }
-            request.onprogress = function(state) {
-                console.log(`@${bridge.tag()} progress:`, state);
-            }
-        }
-
-        bridge.onevent('hello', function(event) {
-            console.log(`@${bridge.tag()} hello:`, event);
-        });
-
-        bridge.onevents(function(command, data) {
-            console.log(`@${bridge.tag()} every ${command}:`, data);
-        });
-    </script>
-</head><body onload="selfIdent()">
-    <h2 id='header'>Widget</h2>
+    <script src='client.js'></script>
+</head><body>
+    <h2 id='header' class='client'>Client</h2>
     <p>Send request to host:</p>
     <button onclick="procRequest(bridge.request('greet'))">REQUEST</button>
     <button onclick="procRequest(bridge.request('greet', 'howdy'))">REQUEST primitive</button>
