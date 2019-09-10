@@ -49,7 +49,7 @@ package {
 			var header:Label = new Label();
 			header.autoSize = TextFieldAutoSize.LEFT;
 			header.setStyle('textFormat', headerFormat);
-			header.text = 'Widget @' + bridge.tag;
+			header.text = 'Client @' + bridge.tag;
 			header.move(10, 10);
 			header.opaqueBackground = 0x9ACD32;
 			addChild(header);

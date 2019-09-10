@@ -103,13 +103,19 @@ package corsbridge {
 		
 		////////////////////////////////////////////////////////////////////////
 		
+		private function extractArray(data:Object):Array {
+			var array:Array = [];
+			for (var key:String in data) array[parseInt(key)] = data[key];
+			return array;
+		}
+		
 		private function onMessage(content:*):void {
 			if (getQualifiedClassName(content) != 'Object') return;
 			var data:Object = content as Object;
-			if (data[CHANNEL_ID] != CHANNEL_HOST) return;
+			if (data[CHANNEL_KEY] != CHANNEL_HOST) return;
 			if (domain != null && data.domain != domain) return;
 			
-			var messages:Array = data['messages'] as Array;
+			var messages:Array = extractArray(data['messages']);
 			if (messages != null) _incomingQueue = _incomingQueue.concat(messages);
 			processIncoming();
 		}
@@ -146,7 +152,7 @@ package corsbridge {
 						
 						case 'response':
 							delete _requestCallbacks[guid];
-							var rest:Array = [null].concat(data as Array);
+							var rest:Array = [null].concat(extractArray(data));
 							if (callbacks.onresponse != null) {
 								callbacks.onresponse.apply(null, rest);
 							}
@@ -181,7 +187,7 @@ package corsbridge {
 			var data:Object = {
 				messages: messages
 			};
-			data[CHANNEL_ID] = CHANNEL_CLIENTS;
+			data[CHANNEL_KEY] = CHANNEL_CLIENTS;
 			if (domain != null) data.domain = domain;
 			
 			ExternalInterface.call(METHOD_SENDER, data);
@@ -197,9 +203,9 @@ package corsbridge {
 		private var _incomingQueue:Array = [];
 		private var _outgoingQueue:Array = [];
 		
-		private static const CHANNEL_HOST:String = 'CORSBridgeHost';
-		private static const CHANNEL_CLIENTS:String = 'CORSBridgeClient';
-		private static const CHANNEL_ID:String = 'cors_bridge_channel';
+		private static const CHANNEL_HOST:String = 'ca5cd683-f69b-4852-b60d-a9c45bf83756';
+		private static const CHANNEL_CLIENTS:String = '5161b727-51e9-4e65-8b2f-511e39eb5f29';
+		private static const CHANNEL_KEY:String = 'cors_bridge_channel';
 		private static const METHOD_SUBSCRIBE:String = 'flashBridgeSubscribe';
 		private static const METHOD_UNSUBSCRIBE:String = 'flashBridgeUnsubscribe';
 		private static const METHOD_SENDER:String = 'flashBridgeBroadcast';

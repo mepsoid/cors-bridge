@@ -7,9 +7,10 @@
 (function() {
     'use strict';
 
-    var channelHost = 'CORSBridgeHost';
-    var channelClients = 'CORSBridgeClient';
-    var channelId = 'cors_bridge_channel';
+    var CHANNEL_KEY = 'cors_bridge_channel';
+    var CHANNEL_HOST = 'ca5cd683-f69b-4852-b60d-a9c45bf83756';
+    var CHANNEL_CLIENTS = '5161b727-51e9-4e65-8b2f-511e39eb5f29';
+    var FRAME_NAME = 'cb617878-1956-4d6a-b087-dc73b223960d';
 
     /**
      * Client request holder
@@ -92,16 +93,24 @@
             root = root.parent;
         }
 
-        if (window.addEventListener) {
-            window.addEventListener('message', onMessage);
+        var frame = document.getElementsByName(FRAME_NAME)[0];
+        if (!frame) {
+            frame = document.createElement('iframe');
+            frame.setAttribute('name', FRAME_NAME);
+            frame.style.display = 'none';
+            document.head.appendChild(frame);
+        }
+        var frameWindow = frame.contentWindow;
+        if (frameWindow.addEventListener) {
+            frameWindow.addEventListener('message', onMessage);
         } else {
-            window.attachEvent('onmessage', onMessage); // IE 8
+            frameWindow.attachEvent('onmessage', onMessage); // IE 8
         }
 
         function onMessage(event) {
             var data = event.data;
             if (typeof(data) !== 'object') return;
-            if (data[channelId] !== channelClients) return;
+            if (data[CHANNEL_KEY] !== CHANNEL_CLIENTS) return;
             if (!domain && data.domain !== domain) return;
 
             var messages = data.messages;
@@ -147,24 +156,30 @@
             var data = {
                 messages: messages
             };
-            data[channelId] = channelHost;
+            data[CHANNEL_KEY] = CHANNEL_HOST;
             if (domain) data.domain = domain;
 
-            var targets = collectTargets(root);
-            for (var i = 0; i < targets.length; ++i) {
-                var target = targets[i];
-                target.postMessage(data, '*');
+            var targets = [root];
+            while (targets.length > 0) {
+                var target = targets.shift();
+                if (target.length > 0) {
+                    var frame = getFrame(target);
+                    for (var i = 0; i < target.length; ++i) {
+                        var item = target[i];
+                        if (item !== frame) targets.push(item);
+                    }
+                    if (frame) frame.postMessage(data, '*');
+                }
             }
         }
 
-        function collectTargets(from) {
-            var collected = [from];
-            for (var i = 0; i < collected.length; ++i) {
-                var target = collected[i];
-                var targets = Array.prototype.slice.call(target.frames);
-                collected = collected.concat(targets);
-            }
-            return collected;
+        // Workaround for missing attribute error in local filesystem
+        function getFrame(target) {
+            var frame;
+            try {
+                frame = target[FRAME_NAME];
+            } catch(err) { }
+            return frame;
         }
 
         function appendReponse(message) {

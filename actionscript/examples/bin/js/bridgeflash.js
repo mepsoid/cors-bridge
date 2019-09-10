@@ -1,8 +1,17 @@
+var FRAME_NAME = 'cb617878-1956-4d6a-b087-dc73b223960d';
 
 var handlerName = null;
 var root = window;
 while (root !== root.parent) {
     root = root.parent;
+}
+
+var frame = document.getElementsByName(FRAME_NAME)[0];
+if (!frame) {
+    frame = document.createElement('iframe');
+    frame.setAttribute('name', FRAME_NAME);
+    frame.style.display = 'none';
+    document.head.appendChild(frame);
 }
 
 function onMessage(message) {
@@ -19,10 +28,11 @@ function flashBridgeSubscribe(name) {
     if (handlerName) return;
 
     handlerName = name;
-    if (window.addEventListener) {
-        window.addEventListener('message', onMessage);
+    var frameWindow = frame.contentWindow;
+    if (frameWindow.addEventListener) {
+        frameWindow.addEventListener('message', onMessage);
     } else {
-        window.attachEvent('onmessage', onMessage); // IE 8
+        frameWindow.attachEvent('onmessage', onMessage); // IE 8
     }
 }
 
@@ -30,21 +40,34 @@ function flashBridgeUnsubscribe(name) {
     if (!handlerName) return;
 
     handlerName = null;
-    if (window.removeEventListener) {
-        window.removeEventListener('message', onMessage);
+    var frameWindow = frame.contentWindow;
+    if (frameWindow.removeEventListener) {
+        frameWindow.removeEventListener('message', onMessage);
     } else {
-        window.detachEvent('onmessage', onMessage); // IE 8
+        frameWindow.detachEvent('onmessage', onMessage); // IE 8
     }
 }
 
 function flashBridgeBroadcast(data) {
     var targets = [root];
-    for (var i = 0; i < targets.length; ++i) {
-        var target = targets[i];
-        target.postMessage(data, '*');
-        
-        var frames = Array.prototype.slice.call(target.frames);
-        targets = targets.concat(frames);
+    while (targets.length > 0) {
+        var target = targets.shift();
+        if (target.length > 0) {
+            var frame = getFrame(target);
+            for (var i = 0; i < target.length; ++i) {
+                var item = target[i];
+                if (item !== frame) targets.push(item);
+            }
+            if (frame) frame.postMessage(data, '*');
+        }
     }
 }
 
+// Workaround for missing attribute error in local filesystem
+function getFrame(target) {
+    var frame;
+    try {
+        frame = target[FRAME_NAME];
+    } catch(err) { }
+    return frame;
+}
