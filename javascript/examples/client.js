@@ -1,4 +1,4 @@
-var bridge = BridgeClient({
+var bridge = new BridgeClient({
     tag: Math.random() * 1000 | 0,
     gather: 2000
 });

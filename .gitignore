@@ -6,3 +6,4 @@ bin-release/
 *.air
 *.ipa
 *.apk
+/actionscript/examples/bin/client.swf

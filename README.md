@@ -47,7 +47,7 @@ bridge endpoint and subscribe handlers to the desired event types:
 
 ```js
 // create client bridge
-var bridge = BridgeClient();
+var bridge = new BridgeClient();
 
 // subscribe to the 'messages' event
 bridge.onevent('messages', function(data) {

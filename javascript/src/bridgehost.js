@@ -18,61 +18,58 @@
     function BridgeHostRequest(guid, tag, queueAppender) {
         var completed = false;
         
-        return {
+        /**
+         * Client identifier
+         */
+        this.tag = function() {
+            return tag;
+        }
 
-            /**
-             * Client identifier
-             */
-            tag: function() {
-                return tag;
-            },
+        /**
+         * Send update with request processing state
+         * 
+         * @param {*=} state current progress statement
+         */
+        this.progress = function(state) {
+            if (completed) {
+                throw new Error('Cannot apply to completed request');
+            }
+            
+            queueAppender({
+                guid: guid,
+                ts: Date.now(),
+                type: 'progress',
+                data: state
+            });
+        }
 
-            /**
-             * Send update with request processing state
-             * 
-             * @param {*=} state current progress statement
-             */
-            progress: function(state) {
-                if (completed) {
-                    throw new Error('Cannot apply to completed request');
-                }
-                
+        /**
+         * Complete request 
+         * 
+         * @param {object=} error error statement
+         * @param {*...} args arguments of successful response
+         */
+        this.response = function(error) {
+            if (completed) {
+                throw new Error('Cannot apply to completed request');
+            }
+
+            completed = true;
+            if (error) {
                 queueAppender({
                     guid: guid,
                     ts: Date.now(),
-                    type: 'progress',
-                    data: state
+                    type: 'error',
+                    data: error
                 });
-            },
-
-            /**
-             * Complete request 
-             * 
-             * @param {object=} error error statement
-             * @param {*...} args arguments of successful response
-             */
-            response: function(error) {
-                if (completed) {
-                    throw new Error('Cannot apply to completed request');
-                }
-
-                completed = true;
-                if (error) {
-                    queueAppender({
-                        guid: guid,
-                        ts: Date.now(),
-                        type: 'error',
-                        data: error
-                    });
-                } else {
-                    var args = Array.prototype.slice.call(arguments, 1);
-                    queueAppender({
-                        guid: guid,
-                        ts: Date.now(),
-                        type: 'response',
-                        data: args
-                    });
-                }
+            } else {
+                var args = Array.prototype.slice.call(arguments, 1);
+                queueAppender({
+                    guid: guid,
+                    ts: Date.now(),
+                    type: 'response',
+                    data: args
+                });
             }
         }
     }
@@ -130,10 +127,10 @@
                 var handler = requestHandlers[message.command];
                 if (!handler) continue;
 
-                var holder = BridgeHostRequest(message.guid, message.tag, appendReponse);
+                var holder = new BridgeHostRequest(message.guid, message.tag, appendReponse);
                 var data = message.data;
                 if (data) {
-                    handler.apply(this, [holder].concat(data));
+                    handler.apply(null, [holder].concat(data));
                 } else {
                     handler(holder);
                 }
@@ -187,69 +184,67 @@
             processOutgoing();
         }
 
-        return {
-
-            /**
-             * Working domain
-             * 
-             * @param {string|undefined} newDomain set up new domain or read current
-             * @return {*} current domain
-             */
-            domain: function(newDomain) {
-                if (newDomain !== undefined) domain = newDomain;
-                return domain;
-            },
-
-            /**
-             * 
-             * @param {number|undefined} newGather set up new blockgathering time 
-             */
-            gather: function(newGather) {
-                if (newGather !== undefined) gatherInterval = newGather > 4 ? newGather : 4;
-                return gatherInterval;
-            },
-
-            /**
-             * Send event to all active clients
-             * 
-             * @param {string} command event type
-             * @param {*=} data event payload
-             */
-            dispatch: function(command, data) {
-                var event = {
-                    ts: Date.now(),
-                    command: command + ''
-                };
-                if (data !== undefined) event.data = data;
-
-                outgoingQueue.push(event);
-                processOutgoing();
-            },
-
-            /**
-             * Client request callback
-             * 
-             * @callback BridgeCallbackRequest
-             * @param {BridgeHostRequest} request request holder
-             * @param {*...} args request arguments
-             */
-
-            /**
-             * Sign to clients requests
-             * 
-             * @param {string} command request type
-             * @param {BridgeCallbackRequest} handler request handler
-             */
-            onrequest: function(command, handler) {
-                if (handler) {
-                    requestHandlers[command] = handler;
-                } else {
-                    delete requestHandlers[command];
-                }
-            }
-
+        /**
+         * Working domain
+         * 
+         * @param {string|undefined} newDomain set up new domain or read current
+         * @return {*} current domain
+         */
+        this.domain = function(newDomain) {
+            if (newDomain !== undefined) domain = newDomain;
+            return domain;
         }
+
+        /**
+         * 
+         * @param {number|undefined} newGather set up new blockgathering time 
+         */
+        this.gather = function(newGather) {
+            if (newGather !== undefined) gatherInterval = newGather > 4 ? newGather : 4;
+            return gatherInterval;
+        }
+
+        /**
+         * Send event to all active clients
+         * 
+         * @param {string} command event type
+         * @param {*=} data event payload
+         */
+        this.dispatch = function(command, data) {
+            var event = {
+                ts: Date.now(),
+                command: command + ''
+            };
+            if (data !== undefined) event.data = data;
+
+            outgoingQueue.push(event);
+            processOutgoing();
+        }
+
+        /**
+         * Client request callback
+         * 
+         * @callback BridgeCallbackRequest
+         * @param {BridgeHostRequest} request request holder
+         * @param {*...} args request arguments
+         */
+
+        /**
+         * Sign to clients requests
+         * 
+         * @param {string} command request type
+         * @param {BridgeCallbackRequest} handler request handler
+         */
+        this.onrequest = function(command, handler) {
+            if (handler) {
+                requestHandlers[command] = handler;
+            } else {
+                delete requestHandlers[command];
+            }
+        }
+
     }
 
-    if (typeof(window.BridgeHost) === 'undefined') window.BridgeHost = BridgeHost();
+    window.BridgeHost = window.BridgeHost || new BridgeHost();
+
 })();

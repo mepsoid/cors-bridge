@@ -14,7 +14,7 @@
     <script>
         var callbacks;
         BridgeHost.onrequest('greet', function(request, rest) {
-            callbacks = request
+            callbacks = request;
             var args = Array.prototype.slice.call(arguments);
             args.shift();
             console.log(`@${request.tag()} greet:`, args);

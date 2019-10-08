@@ -101,7 +101,7 @@
                             delete requestCallbacks[guid];
                             data.unshift(null); // no error
                             if (callbacks.onresponse) {
-                                callbacks.onresponse.apply(this, data);
+                                callbacks.onresponse.apply(null, data);
                             }
                             break;
                     }
@@ -181,130 +181,128 @@
             return uuid;
         }
 
-        return {
+        /**
+         * Client identifier
+         */
+        this.tag = function() {
+            return tag;
+        }
 
-            /**
-             * Client identifier
-             */
-            tag: function() {
-                return tag;
-            },
+        /**
+         * Working domain
+         */
+        this.domain = function() {
+            return domain;
+        }
 
-            /**
-             * Working domain
-             */
-            domain: function() {
-                return domain;
-            },
+        /**
+         * Progress callback of request
+         * 
+         * @callback BridgeCallbackProgress
+         * @param {*=} data progress statement
+         */
 
-            /**
-             * Progress callback of request
-             * 
-             * @callback BridgeCallbackProgress
-             * @param {*=} data progress statement
-             */
+        /**
+         * Response callback of request
+         * 
+         * @callback BridgeCallbackResponse
+         * @param {*=} error error statement
+         * @param {*...} args successful response arguments
+         */
 
-            /**
-             * Response callback of request
-             * 
-             * @callback BridgeCallbackResponse
-             * @param {*=} error error statement
-             * @param {*...} args successful response arguments
-             */
+        /**
+         * Bridge callback handlers
+         * 
+         * @typedef {object} BridgeCallbacks
+         * @property {BridgeCallbackProgress=} onprogress progress update handler
+         * @property {BridgeCallbackResponse=} onresponse response handler
+         */
 
-            /**
-             * Bridge callback handlers
-             * 
-             * @typedef {object} BridgeCallbacks
-             * @property {BridgeCallbackProgress=} onprogress progress update handler
-             * @property {BridgeCallbackResponse=} onresponse response handler
-             */
+        /**
+         * Send request to host
+         * 
+         * @param {string} command request type
+         * @param {*...} args request arguments
+         * @return {BridgeCallbacks}
+         */
+        this.request = function(command) {
+            var guid = createGuid();
+            var callbacks = {};
+            requestCallbacks[guid] = callbacks;
 
-            /**
-             * Send request to host
-             * 
-             * @param {string} command request type
-             * @param {*...} args request arguments
-             * @return {BridgeCallbacks}
-             */
-            request: function(command) {
-                var guid = createGuid();
-                var callbacks = {};
-                requestCallbacks[guid] = callbacks;
+            var request = {
+                ts: Date.now(),
+                guid: guid,
+                command: command + ''
+            };
+            if (tag) request.tag = tag;
+            var args = Array.prototype.slice.call(arguments, 1);
+            if (args.length > 0) request.data = args;
 
-                var request = {
-                    ts: Date.now(),
-                    guid: guid,
-                    command: command + ''
-                };
-                if (tag) request.tag = tag;
-                var args = Array.prototype.slice.call(arguments, 1);
-                if (args.length > 0) request.data = args;
+            outgoingQueue.push(request);
+            processOutgoing();
+            return callbacks;
+        }
 
-                outgoingQueue.push(request);
-                processOutgoing();
-                return callbacks;
-            },
-
-            /**
-             * Host specific event callback
-             * 
-             * @callback BridgeSpecificEvent
-             * @param {*=} data event data
-             */
-                
-            /**
-             * Sign to host events
-             * 
-             * @param {string} command event type
-             * @param {BridgeSpecificEvent} handler specific events handler
-             */
-            onevent: function(command, handler) {
-                if (handler) {
-                    eventHandlers[command] = handler;
-                } else {
-                    delete eventHandlers[command];
-                }
-            },
-
-            /**
-             * Host every event handler
-             * 
-             * @callback BridgeSpecificEvent
-             * @param {string} command event type
-             * @param {*=} data event data
-             */
-
-            /**
-             * Sign on all possible events
-             * 
-             * @param {BridgeEveryEvent} handler handler for all events
-             */
-            onevents: function(handler) {
-                eventEvery = handler;
-            },
-
-            /**
-             * Shutdown and wipe out bridge
-             * 
-             * Must be called in case of client widget stops its job
-             */
-            destroy: function() {
-                if (frameWindow.removeEventListener) {
-                    frameWindow.removeEventListener('message', onMessage);
-                } else {
-                    frameWindow.detachEvent('onmessage', onMessage); // IE 8
-                }
-
-                eventEvery = null;
-                eventHandlers = null;
-                requestCallbacks = null;
-                incomingQueue = null;
-                outgoingQueue = null;
+        /**
+         * Host specific event callback
+         * 
+         * @callback BridgeSpecificEvent
+         * @param {*=} data event data
+         */
+            
+        /**
+         * Sign to host events
+         * 
+         * @param {string} command event type
+         * @param {BridgeSpecificEvent} handler specific events handler
+         */
+        this.onevent = function(command, handler) {
+            if (handler) {
+                eventHandlers[command] = handler;
+            } else {
+                delete eventHandlers[command];
             }
         }
+
+        /**
+         * Host every event handler
+         * 
+         * @callback BridgeSpecificEvent
+         * @param {string} command event type
+         * @param {*=} data event data
+         */
+
+        /**
+         * Sign on all possible events
+         * 
+         * @param {BridgeEveryEvent} handler handler for all events
+         */
+        this.onevents = function(handler) {
+            eventEvery = handler;
+        }
+
+        /**
+         * Shutdown and wipe out bridge
+         * 
+         * Must be called in case of client widget stops its job
+         */
+        this.destroy = function() {
+            if (frameWindow.removeEventListener) {
+                frameWindow.removeEventListener('message', onMessage);
+            } else {
+                frameWindow.detachEvent('onmessage', onMessage); // IE 8
+            }
+
+            eventEvery = null;
+            eventHandlers = null;
+            requestCallbacks = null;
+            incomingQueue = null;
+            outgoingQueue = null;
+        }
+
     }
 
-    if (typeof(window.BridgeClient) === 'undefined') window.BridgeClient = BridgeClient;
+    window.BridgeClient = window.BridgeClient || BridgeClient;
 
 })();
