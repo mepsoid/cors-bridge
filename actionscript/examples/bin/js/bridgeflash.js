@@ -21,7 +21,11 @@ function onMessage(message) {
         window['client'] :
         document['client'];
     var handler = container[handlerName];
-    if (handler) handler(message.data);
+    if (handler) {
+        // Workaround to keep arrays not associative
+        var data = JSON.parse(JSON.stringify(message.data));
+        handler(data);
+    }
 }
 
 function flashBridgeSubscribe(name) {

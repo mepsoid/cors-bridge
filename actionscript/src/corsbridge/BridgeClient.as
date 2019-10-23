@@ -103,19 +103,13 @@ package corsbridge {
 		
 		////////////////////////////////////////////////////////////////////////
 		
-		private function extractArray(data:Object):Array {
-			var array:Array = [];
-			for (var key:String in data) array[parseInt(key)] = data[key];
-			return array;
-		}
-		
 		private function onMessage(content:*):void {
 			if (getQualifiedClassName(content) != 'Object') return;
 			var data:Object = content as Object;
 			if (data[CHANNEL_KEY] != CHANNEL_HOST) return;
 			if (domain != null && data.domain != domain) return;
 			
-			var messages:Array = extractArray(data['messages']);
+			var messages:Array = data['messages'];
 			if (messages != null) _incomingQueue = _incomingQueue.concat(messages);
 			processIncoming();
 		}
@@ -152,7 +146,7 @@ package corsbridge {
 						
 						case 'response':
 							delete _requestCallbacks[guid];
-							var rest:Array = [null].concat(extractArray(data));
+							var rest:Array = [null].concat(data);
 							if (callbacks.onresponse != null) {
 								callbacks.onresponse.apply(null, rest);
 							}
